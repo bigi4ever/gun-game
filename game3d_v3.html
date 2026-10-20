@@ -93,14 +93,25 @@ const outer=new THREE.Mesh(new THREE.PlaneGeometry(W*4,D*4),LM(0x3d6b2a));
 outer.rotation.x=-PI/2;outer.position.y=-.05;scene.add(outer);
 const trunkM=LM(0x6b4423),leafM=[0x2f7a3a,0x3c8f45,0x26683a].map(LM),rockM=new THREE.MeshLambertMaterial({color:0x8a8d8f,flatShading:true}),bushM=LM(0x4a9a3f);
 const add=(m,x,y,z)=>put(m,x,y,z,scene);
+const trees=[]; // each tree has its own materials so it can fade when it blocks the view
 for(let i=0;i<80;i++){
   let x,z;
   if(Math.random()<.5){x=(Math.random()<.5?-1:1)*R(W/2-6,W/2-.5);z=R(-D/2,D/2)}
   else{z=(Math.random()<.5?-1:1)*R(D/2-6,D/2-.5);x=R(-W/2,W/2)}
-  if(Math.abs(x)<8&&z>D/2-10)continue;const s=R(.9,1.7);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.25*s,.35*s,1.8*s,6),trunkM),x,.9*s,z);
-  add(new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s,7),leafM[i%3]),x,2.7*s,z);
-  add(new THREE.Mesh(new THREE.ConeGeometry(1*s,2.2*s,7),leafM[i%3]),x,4.1*s,z);
+  if(Math.abs(x)<8&&z>D/2-10)continue;const s=R(.9,1.7),tm=trunkM.clone(),lm=leafM[i%3].clone();
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.25*s,.35*s,1.8*s,6),tm),x,.9*s,z);
+  add(new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s,7),lm),x,2.7*s,z);
+  add(new THREE.Mesh(new THREE.ConeGeometry(1*s,2.2*s,7),lm),x,4.1*s,z);
+  trees.push({x,z,ms:[tm,lm],o:1});
+}
+// fade trees between the camera and the focus point (player, or the map center while placing)
+function fadeTrees(fx,fz,dt){
+  for(const t of trees){
+    const dz=t.z-fz,hide=dz>1&&dz<14&&Math.abs(t.x-fx)<4+dz*.9,to=hide?.25:1;
+    let o=t.o+(to-t.o)*Math.min(1,8*dt);if(Math.abs(to-o)<.01)o=to;
+    if(o===t.o)continue;t.o=o;
+    for(const m of t.ms){m.opacity=o;m.transparent=o<1;m.depthWrite=o===1}
+  }
 }
 for(let i=0;i<45;i++){const s=R(.3,.9);const m=add(new THREE.Mesh(new THREE.DodecahedronGeometry(s),rockM),R(-W/2+2,W/2-2),s*.4,R(-D/2+2,D/2-2));m.rotation.set(R(0,3),R(0,3),0);m.scale.y=.6}
 for(let i=0;i<35;i++){const s=R(.5,1.1);const m=add(new THREE.Mesh(new THREE.SphereGeometry(s,8,6),bushM),R(-W/2+2,W/2-2),s*.5,R(-D/2+2,D/2-2));m.scale.y=.7}
@@ -520,6 +531,7 @@ function loop(){
   if(shake>0)shake-=dt;
   if(placing){focus.x=Math.max(-W/2,Math.min(W/2,focus.x+((keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0))*30*dt));focus.z=Math.max(-D/2,Math.min(D/2,focus.z+((keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0))*30*dt))}
   const fx=placing?focus.x:player.position.x,fz=placing?focus.z:player.position.z;
+  fadeTrees(fx,fz,dt);
   camPos.lerp(new THREE.Vector3(fx,10,fz+10),Math.min(1,6*dt));
   cam.position.copy(camPos);
   if(shake>0)cam.position.add(new THREE.Vector3(R(-.3,.3),R(-.3,.3),0));
