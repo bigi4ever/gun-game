@@ -5,6 +5,8 @@
 ## הרצה
 פותחים את `game3d_v3.html` בדפדפן. נדרש חיבור לאינטרנט בגלל three.js.
 
+ב־GitHub Pages: https://bigi4ever.github.io/gun-game/ (הקובץ `index.html` מפנה אוטומטית ל־`game3d_v3.html`).
+
 ## מקשים
 | מקש | פעולה |
 |---|---|
